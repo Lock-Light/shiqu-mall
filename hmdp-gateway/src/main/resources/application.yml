@@ -1,0 +1,15 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: hmdp-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos:8848
+        group: ${DISCOVERY_GROUP:shiqu}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

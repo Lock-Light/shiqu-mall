@@ -1,0 +1,4 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+  <!-- 本地容器访问Central超时的可选镜像；不改变依赖版本，不含凭据。 -->
+  <mirrors><mirror><id>central</id><mirrorOf>central</mirrorOf><url>https://maven.aliyun.com/repository/public</url></mirror></mirrors>
+</settings>

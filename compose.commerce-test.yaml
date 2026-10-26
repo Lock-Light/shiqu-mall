@@ -1,0 +1,84 @@
+name: hmdp-commerce-test
+services:
+  test-redis:
+    image: redis:7.4-alpine
+    command: [redis-server, --requirepass, plus-local]
+    mem_limit: 100m
+    healthcheck:
+      test: [CMD, redis-cli, -a, plus-local, ping]
+      interval: 3s
+      retries: 20
+  commerce-test-core:
+    image: hmdp-plus/app:local
+    environment:
+      SPRING_APPLICATION_NAME: hmdp-core-test
+      SPRING_DATASOURCE_URL: jdbc:shardingsphere:absolutepath:/config/shardingsphere-test.yaml
+      SPRING_DATA_REDIS_HOST: test-redis
+      PREFIX_DISTINCTION_NAME: commerce-test
+      DISCOVERY_GROUP: commerce-test
+      RPC_GROUP: commerce-test
+    volumes:
+      - ./infra/application-local.yaml:/config/application-local.yaml:ro
+      - ./.runtime/shardingsphere-test.yaml:/config/shardingsphere-test.yaml:ro
+      - test-uploads:/uploads
+    networks: [default, plus]
+    depends_on:
+      test-redis: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://localhost:8085/shop-type/list >/dev/null']
+      interval: 5s
+      retries: 45
+    mem_limit: 850m
+  commerce-test-app:
+    image: hmdp-plus/commerce:local
+    environment:
+      SPRING_APPLICATION_NAME: hmdp-commerce-test
+      COMMERCE_JDBC_URL: jdbc:mysql://mysql:3306/hmdp_commerce_test?serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATA_REDIS_HOST: test-redis
+      PREFIX_DISTINCTION_NAME: commerce-test
+      DISCOVERY_GROUP: commerce-test
+      RPC_GROUP: commerce-test
+      COMMERCE_RABBIT_EXCHANGE: commerce-test-orders-v2
+      COMMERCE_RABBIT_QUEUE: commerce-test-orders-v2
+      RABBIT_HOST: ${COMMERCE_TEST_RABBIT_HOST:-rabbitmq}
+      MANAGEMENT_HEALTH_RABBIT_ENABLED: 'false'
+      COMMERCE_DISPATCH_ENABLED: ${COMMERCE_TEST_DISPATCH_ENABLED:-true}
+      COMMERCE_SYNC_ENABLED: ${COMMERCE_TEST_SYNC_ENABLED:-true}
+    networks: [default, plus]
+    depends_on:
+      commerce-test-core: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://localhost:8086/actuator/health >/dev/null']
+      interval: 5s
+      retries: 45
+    mem_limit: 650m
+  commerce-test-gateway:
+    image: hmdp-plus/gateway:local
+    environment:
+      SPRING_APPLICATION_NAME: hmdp-gateway-test
+      DISCOVERY_GROUP: commerce-test
+      ROUTES_CORE: hmdp-core-test
+      ROUTES_COMMERCE: hmdp-commerce-test
+    networks: [default, plus]
+    depends_on:
+      commerce-test-app: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://localhost:8080/actuator/health >/dev/null']
+      interval: 5s
+      retries: 40
+    mem_limit: 450m
+  commerce-test-web:
+    image: openresty/openresty:alpine
+    ports: ['127.0.0.1:18092:80']
+    volumes:
+      - ./infra/nginx-commerce-test.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+      - ./hmdp-vue3/dist:/web:ro
+      - test-uploads:/uploads:ro
+    depends_on:
+      commerce-test-gateway: {condition: service_healthy}
+networks:
+  plus:
+    external: true
+    name: hmdp-plus_default
+volumes:
+  test-uploads:

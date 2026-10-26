@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:shardingsphere:absolutepath:/config/shardingsphere.yaml
+  data:
+    redis:
+      host: redis
+      password: plus-local
+      database: 0
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+commerce:
+  mock-payment-enabled: true
+  payment-minutes: 15
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+logging:
+  level:
+    org.apache.shardingsphere: warn

@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS mall_shop_profile (
+ shop_id BIGINT PRIMARY KEY, city VARCHAR(40) NOT NULL, district VARCHAR(80) NOT NULL,
+ introduction TEXT NOT NULL, audience TEXT NOT NULL, arrival_tips TEXT NOT NULL,
+ hours VARCHAR(150) NOT NULL, provenance VARCHAR(255) NOT NULL,
+ batch VARCHAR(80) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS mall_product_media (
+ product_id BIGINT NOT NULL, position INT NOT NULL, asset_id VARCHAR(60) NOT NULL,
+ image_url VARCHAR(255) NOT NULL, thumbnail_url VARCHAR(255) NOT NULL,
+ caption VARCHAR(255) NOT NULL, PRIMARY KEY(product_id,position)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS mall_reference_place (
+ source_id VARCHAR(80) PRIMARY KEY, name VARCHAR(255) NOT NULL, category VARCHAR(80) NOT NULL,
+ longitude DECIMAL(11,7) NOT NULL, latitude DECIMAL(10,7) NOT NULL,
+ address VARCHAR(255) NOT NULL, source_url VARCHAR(255) NOT NULL,
+ source_timestamp VARCHAR(40) NOT NULL, license VARCHAR(40) NOT NULL,
+ batch VARCHAR(80) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS mall_demo_record (
+ kind VARCHAR(30) NOT NULL, entity_id VARCHAR(80) NOT NULL, batch VARCHAR(80) NOT NULL,
+ content_hash CHAR(64) NOT NULL, imported_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ PRIMARY KEY(kind,entity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

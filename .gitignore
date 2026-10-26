@@ -1,0 +1,67 @@
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+logs/
+
+**/dependency-reduced-pom.xml
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+.DS_Store
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+*.log
+*.hprof
+.flattened-pom.xml
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+.vscode
+.qoder
+.cursor
+.trae
+.codex
+.claude
+.agents
+CLAUDE.md
+AGENTS.md
+
+document
+.runtime/
+infra/seed/
+**/node_modules/
+**/dist/
+**/__pycache__/
+*.pyc
+.firecrawl/
+
+# Local configuration, generated verification records and runtime data
+**/.env*
+!**/.env.example
+evidence/
+docs/evidence/
+*.rdb
+*.p12
+*.pfx
+*.pem

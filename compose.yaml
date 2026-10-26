@@ -1,0 +1,127 @@
+name: hmdp-plus
+services:
+  mysql:
+    image: mysql:8.4
+    command: [--default-time-zone=+08:00]
+    environment:
+      MYSQL_ROOT_PASSWORD: plus-root-local
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql:/var/lib/mysql
+      - ./infra/seed:/seed:ro
+      - ./infra/mysql-init.sh:/docker-entrypoint-initdb.d/01-plus.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'mysql --protocol=TCP -h127.0.0.1 -uhmdp -pplus-local hmdp_1 -e "SELECT COUNT(*) FROM tb_shop" >/dev/null 2>&1']
+      interval: 5s
+      retries: 35
+    mem_limit: 700m
+  redis:
+    image: redis:7.4-alpine
+    command: [redis-server, --requirepass, plus-local, --appendonly, 'yes']
+    volumes: [redis:/data]
+    healthcheck:
+      test: [CMD, redis-cli, -a, plus-local, ping]
+      interval: 5s
+      retries: 20
+    mem_limit: 150m
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: shiqu
+      RABBITMQ_DEFAULT_PASS: shiqu-local
+    volumes: [rabbitmq:/var/lib/rabbitmq]
+    mem_limit: 400m
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 5s
+      retries: 30
+  nacos:
+    image: nacos/nacos-server:v2.5.1
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      NACOS_AUTH_ENABLE: 'false'
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+    volumes: [nacos:/home/nacos/data]
+    mem_limit: 800m
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://localhost:8848/nacos/v1/console/health/readiness >/dev/null']
+      interval: 5s
+      retries: 45
+  app:
+    image: hmdp-plus/app:local
+    build:
+      context: .
+      dockerfile: infra/app.Dockerfile
+    volumes:
+      - ./infra/application-local.yaml:/config/application-local.yaml:ro
+      - ./infra/shardingsphere.yaml:/config/shardingsphere.yaml:ro
+      - uploads:/uploads
+    ports: ['127.0.0.1:18185:8085']
+    depends_on:
+      mysql: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+      nacos: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://localhost:8085/shop-type/list >/dev/null']
+      interval: 10s
+      retries: 30
+    mem_limit: 850m
+  commerce:
+    image: hmdp-plus/commerce:local
+    build:
+      context: .
+      dockerfile: infra/commerce.Dockerfile
+    depends_on:
+      app: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+      nacos: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://localhost:8086/actuator/health >/dev/null']
+      interval: 5s
+      retries: 45
+    mem_limit: 650m
+  gateway:
+    image: hmdp-plus/gateway:local
+    build:
+      context: .
+      dockerfile: infra/gateway.Dockerfile
+    depends_on:
+      app: {condition: service_healthy}
+      commerce: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS http://localhost:8080/actuator/health >/dev/null']
+      interval: 5s
+      retries: 30
+    mem_limit: 450m
+  web:
+    image: openresty/openresty:alpine
+    volumes:
+      - ./infra/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+      - ./hmdp-vue3/dist:/web:ro
+      - uploads:/uploads:ro
+    ports: ['127.0.0.1:18091:80']
+    depends_on:
+      gateway: {condition: service_healthy}
+  build:
+    image: maven:3.9.11-eclipse-temurin-17
+    profiles: [tools]
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - maven:/root/.m2
+    environment:
+      MAVEN_OPTS: '-Xmx512m -XX:ActiveProcessorCount=2'
+    command: [mvn, -B, -ntp, -DskipTests, package]
+volumes:
+  mysql:
+  redis:
+  rabbitmq:
+  nacos:
+  uploads:
+  maven:
+    external: true
+    name: hmdp-course_maven

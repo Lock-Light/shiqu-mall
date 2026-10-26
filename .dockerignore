@@ -1,0 +1,14 @@
+**/*
+!infra/
+!infra/app.Dockerfile
+!infra/commerce.Dockerfile
+!infra/gateway.Dockerfile
+!hmdp-core-service/
+!hmdp-core-service/target/
+!hmdp-core-service/target/hmdp-core-service-0.0.1-SNAPSHOT.jar
+!hmdp-commerce-service/
+!hmdp-commerce-service/target/
+!hmdp-commerce-service/target/hmdp-commerce-service-0.0.1-SNAPSHOT.jar
+!hmdp-gateway/
+!hmdp-gateway/target/
+!hmdp-gateway/target/hmdp-gateway-0.0.1-SNAPSHOT.jar

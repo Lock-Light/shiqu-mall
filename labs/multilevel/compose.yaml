@@ -1,0 +1,70 @@
+name: hmdp-plus-cache-lab
+services:
+  mysql:
+    image: mysql:8.4
+    command: [--server-id=93, --log-bin=mysql-bin, --binlog-format=ROW, --binlog-row-image=FULL, --mysql-native-password=ON]
+    environment: {MYSQL_ROOT_PASSWORD: cache-root-local}
+    volumes: [./init.sql:/docker-entrypoint-initdb.d/01-lab.sql:ro]
+    healthcheck:
+      test: [CMD-SHELL, 'mysql -ulab -pcache-local cache_lab -e "SELECT 1" >/dev/null 2>&1']
+      interval: 3s
+      retries: 40
+    mem_limit: 550m
+  redis:
+    image: redis:7.4-alpine
+    command: [redis-server, --requirepass, cache-local]
+    mem_limit: 96m
+  app:
+    image: maven:3.9.11-eclipse-temurin-17
+    command: [java, -Xmx192m, -jar, /app/lab.jar]
+    environment: {INSTANCE: app1, CANAL_ENABLED: 'true'}
+    volumes: [./target/plus-cache-lab-1.0.jar:/app/lab.jar:ro]
+    depends_on: {mysql: {condition: service_healthy}, redis: {condition: service_started}}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS localhost:8080/health >/dev/null']
+      interval: 3s
+      retries: 40
+    mem_limit: 350m
+  app2:
+    image: maven:3.9.11-eclipse-temurin-17
+    command: [java, -Xmx192m, -jar, /app/lab.jar]
+    environment: {INSTANCE: app2}
+    volumes: [./target/plus-cache-lab-1.0.jar:/app/lab.jar:ro]
+    depends_on: {mysql: {condition: service_healthy}, redis: {condition: service_started}}
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS localhost:8080/health >/dev/null']
+      interval: 3s
+      retries: 40
+    mem_limit: 350m
+  edge:
+    image: openresty/openresty:alpine
+    volumes:
+      - ./nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+      - ./shop.lua:/etc/nginx/shop.lua:ro
+    ports: ['127.0.0.1:18092:80']
+    depends_on: {app: {condition: service_healthy}, app2: {condition: service_healthy}}
+    mem_limit: 96m
+  canal:
+    image: canal/canal-server:v1.1.8
+    environment:
+      canal.auto.scan: 'false'
+      canal.destinations: example
+      canal.instance.master.address: mysql:3306
+      canal.instance.dbUsername: canal
+      canal.instance.dbPassword: canal-local
+      canal.instance.connectionCharset: UTF-8
+      canal.instance.filter.regex: 'cache_lab\.tb_shop'
+      canal.instance.tsdb.enable: 'false'
+    depends_on: {mysql: {condition: service_healthy}}
+    mem_limit: 700m
+  build:
+    image: maven:3.9.11-eclipse-temurin-17
+    profiles: [tools]
+    working_dir: /workspace
+    volumes: [.:/workspace, maven:/root/.m2]
+    environment: {MAVEN_OPTS: '-Xmx384m -XX:ActiveProcessorCount=2'}
+    command: [mvn, -B, -ntp, -DskipTests, package]
+volumes:
+  maven:
+    external: true
+    name: hmdp-course_maven
